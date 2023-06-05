@@ -1,0 +1,25 @@
+-- Bill Roscoe: CSP + Model Checking ==> CSPm + Refinement Checking
+
+channel bracoGiraParaDireita, bracoGiraParaEsquerda, garraFechou, garraAbriu, bracoNaPosicaoInicial
+channel queLado: {0, 1}
+
+RoboD_O = bracoNaPosicaoInicial -> (bracoGiraParaEsquerda -> garraFechou -> garraAbriu -> RoboD_O
+									[] bracoGiraParaDireita -> garraFechou -> garraAbriu -> RoboD_O)
+
+RoboD = bracoNaPosicaoInicial -> (bracoGiraParaEsquerda -> RoboDCont [] bracoGiraParaDireita -> RoboDCont)
+
+RoboDCont = garraFechou -> garraAbriu -> RoboD
+
+assert RoboD_O [T= RoboD -- RoboD eh melhor que RoboD_O??
+assert RoboD [T= RoboD_O -- RoboD_O eh melhor que RoboD??
+-- Ou seja, RoboD_O == RoboD??
+
+RoboND = bracoNaPosicaoInicial -> (bracoGiraParaEsquerda -> RoboNDCont |~| bracoGiraParaDireita -> RoboNDCont)
+
+RoboNDCont = garraFechou -> garraAbriu -> RoboND
+
+
+RoboIF = bracoNaPosicaoInicial -> queLado?lado -> if lado==0 then bracoGiraParaEsquerda -> RoboIFCont
+			   					                  else bracoGiraParaDireita -> RoboIFCont
+
+RoboIFCont = garraFechou -> garraAbriu -> RoboIF

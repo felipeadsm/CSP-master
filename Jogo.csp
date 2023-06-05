@@ -1,0 +1,76 @@
+-- CONSTANTES
+
+-- Constante com o conjunto de identificação dos jogadores.
+IDENTIFICACAO_DOS_JOGADORES = {1, 2}
+-- Constante com o conjunto das linhas do tabuleiro.
+LINHAS = {1, 2, 3}
+-- Constante com o conjunto das colunas dos tabuleiros.
+COLUNAS = {1, 2, 3}
+-- Constante com o conjunto dos posssíveis estados de cada célula do tabuleiro.
+ESTADOS = {0, 1, 2}
+-- Constante com o conjunto de todas as possíveis posições do tabuleiro. Formato: (linha, coluna).
+LISTA_DE_POSSIVEIS_POSICOES = { (l, c) | l <- LINHAS, c <- COLUNAS }
+-- Constante com o conjunto das posições vazias do tabuleiro.
+TABULEIRO_VAZIO = {(1, 1, 0), (1, 2, 0), (1, 3, 0), (2, 1, 0), (2, 2, 0), (2, 3, 0), (3, 1, 0), (3, 2, 0), (3, 3, 0)}
+
+-- EVENTOS E CANAIS.
+
+-- Canal com responsável por listar as posições vazias para um jogador específico. Formato: listar_posicoes_vazias.1.{(1,2), (3,2)}.
+channel listar_posicoes_vazias : IDENTIFICACAO_DOS_JOGADORES.Set(LISTA_DE_POSSIVEIS_POSICOES)
+-- Canal responsável por realizar a jogada de um jogador específico. Formato: jogar.1.(1,2).
+channel jogar : IDENTIFICACAO_DOS_JOGADORES.LISTA_DE_POSSIVEIS_POSICOES
+-- Canal responsável por listar as posições possíveis.
+channel listar_possiveis_posicoes : LISTA_DE_POSSIVEIS_POSICOES
+-- Canal responsável por informar o vencedor do jogo.
+channel informar_vencedor : IDENTIFICACAO_DOS_JOGADORES
+-- Evento responsável por encerrar o jogo.
+channel encerrar_jogo
+
+-- FUNÇÕES
+
+-- Função responsável por calcular as posições vazias.
+calcular_posicoes_vazias(tabuleiro) = {(linha, coluna) | (linha, coluna, estado) <- tabuleiro, estado == 0}
+-- Função responsável por atualizar o tabuleiro.
+
+atualizar_tabuleiro(tabuleiro, (linha_escolhida, coluna_escolhida), jogador_escolhido) = union(diff(tabuleiro, {(linha_escolhida, coluna_escolhida, 0)}), {(linha_escolhida, coluna_escolhida, jogador_escolhido)})
+
+-- Função responsável por verificar linhas completas.
+verificar_linhas (tabuleiro, linha_escolhida, jogador_escolhido) = (card({(linha, coluna, estado) | (linha, coluna, estado) <- tabuleiro, linha == linha_escolhida and estado == jogador_escolhido}) == 3)
+-- Função responsável por verificar colunas completas.
+verificar_colunas (tabuleiro, coluna_escolhida, jogador_escolhido) = (card({(linha, coluna, estado) | (linha, coluna, estado) <- tabuleiro, coluna == coluna_escolhida and estado == jogador_escolhido}) == 3)
+-- Função responsável por verificar se houve vencedor no jogo.
+sinalizar_vitoria(tabuleiro) = union({(linha_definida, jogador_definido) | linha_definida <- LINHAS, jogador_definido <- IDENTIFICACAO_DOS_JOGADORES, verificar_linhas(tabuleiro, linha_definida, jogador_definido)}, {(coluna_definida, jogador_definido) | coluna_definida <- COLUNAS, jogador_definido <- IDENTIFICACAO_DOS_JOGADORES, verificar_colunas(tabuleiro, coluna_definida, jogador_definido)})
+
+-- Função responsável por verificar quem venceu o jogo.
+-- calcular_vencedor(tabuleiro) = 
+-- PROCESSOS.
+
+calcular_vencedor({(lORc, jogador)}) = jogador
+calcular_vencedor(s) = 1 -- Gambiarra (Tem que consertar definicao acima!)
+
+alterna(1) = 2
+alterna(2) = 1
+
+-- Processo do jogo.
+Jogo_Da_Velha(tabuleiro, jogador) = 
+	let
+		resultadoVitoria = sinalizar_vitoria(tabuleiro)
+		houve_vencedor = not empty(resultadoVitoria)
+	within (not houve_vencedor & listar_posicoes_vazias!jogador!calcular_posicoes_vazias(tabuleiro) -> jogar!jogador?posicao_escolhida -> Jogo_Da_Velha(atualizar_tabuleiro(tabuleiro, posicao_escolhida, jogador), alterna(jogador))
+			[] (houve_vencedor & encerrar_jogo -> informar_vencedor!calcular_vencedor(resultadoVitoria) -> Jogo_Da_Velha(TABULEIRO_VAZIO, alterna(jogador))))
+
+Jogador(jogador) = listar_posicoes_vazias!jogador?posicoes -> (if posicoes != {} then |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida -> jogar!jogador!posicao_escolhida -> Jogador(jogador)
+															   else Jogador(jogador))
+															  [] (encerrar_jogo -> Jogador(jogador))
+Jogadores = ||| jogador:{1,2} @ Jogador(jogador)
+
+Jogo = (Jogo_Da_Velha(TABULEIRO_VAZIO, 1) [|{|listar_posicoes_vazias, jogar, encerrar_jogo|}|] Jogadores) \ {|listar_posicoes_vazias, listar_possiveis_posicoes|}
+
+assert Jogador(1) :[deterministic [F]]
+assert Jogo_Da_Velha(TABULEIRO_VAZIO, 1) :[deterministic [F]]
+
+assert Jogo :[deterministic [F]]
+assert Jogo :[deadlock free [F]]
+assert Jogo :[livelock free [FD]]
+
+assert  (Jogo \ diff(Events, {|informar_vencedor|})) [T= ([] jogador: IDENTIFICACAO_DOS_JOGADORES @ informar_vencedor!jogador -> STOP)

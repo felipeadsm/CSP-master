@@ -1,0 +1,25 @@
+channel deposit, saque: {0..10}
+channel saldo, print: {0..20}
+channel saqueInvalido, depositoInvalido
+
+Contrato1(CC) =
+let
+	fazDeposit(v) = CC + v
+	fazSaque(v) = CC - v
+within
+	(deposit?x -> (if x>=0 and CC+x < 20 then Contrato1(fazDeposit(x))
+				else depositoInvalido -> Contrato1(CC))
+	[]
+	saldo!CC -> Contrato1(CC)
+	[]
+	saque?x -> (if x<=CC then Contrato1(fazSaque(x))
+				else saqueInvalido -> Contrato1(CC)))
+
+
+Cliente1 = deposit!10 -> saldo?s -> print!s -> saque!5 -> saldo?t -> print!t -> STOP
+
+Sistema = Contrato1(0) [|{|deposit, saldo, saque|}|] Cliente1
+
+assert Sistema :[deterministic [FD]]
+assert Sistema :[deadlock free [F]]
+assert Sistema :[livelock free [FD]]

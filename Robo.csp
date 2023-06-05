@@ -1,0 +1,44 @@
+datatype Remedio = paracetamol | dipirona | dramin
+
+channel posicaoInicial, posicaoFrenteAoObjeto, abreGarra, posicaoNoObjeto,
+			fechaGarra, posicaoCaixa, objetoEntrouNaCaixa, naoSeguraObjeto
+
+channel pegaObjeto: Remedio
+
+channel estadoInicial, novoEstado, depositoVazio, depositoReposto
+
+Robo = posicaoInicial -> posicaoFrenteAoObjeto -> abreGarra -> posicaoNoObjeto ->
+			fechaGarra -> (pegaObjeto!paracetamol -> posicaoCaixa -> abreGarra -> objetoEntrouNaCaixa -> Robo
+							|~| naoSeguraObjeto -> Robo)
+		[] depositoVazio -> Robo
+
+Deposito(0) = depositoVazio -> depositoReposto -> Deposito(5)
+
+Deposito(nObj) = estadoInicial -> pegaObjeto?med -> novoEstado -> Deposito(nObj-1)
+
+
+RoboHC = Robo [|{|pegaObjeto, depositoVazio|}|] Deposito(5)
+
+assert RoboHC :[deadlock free [F]]
+
+
+
+
+
+
+
+
+
+
+
+
+-- Robo(acertos, errou) = posicaoInicial -> posicaoFrenteAoObjeto -> abreGarra -> posicaoNoObjeto ->
+-- 			fechaGarra -> (acertos < 3 & pegaObjeto -> posicaoCaixa -> abreGarra -> objetoEntrouNaCaixa -> Robo(acertos+1, false)
+-- 							|~|
+-- 						   not errou & naoSeguraObjeto -> Robo(0, true))
+
+-- RunRobo = Robo(0, false)
+
+-- assert RunRobo :[deadlock free [F]]
+-- assert RunRobo :[deterministic]
+-- assert RunRobo :[divergence free]

@@ -1,0 +1,44 @@
+QTDC = 6
+C_C = {1..QTDC}
+
+QTDV = 4
+C_V = {0..QTDV}
+
+NTEN = 3
+
+channel rodando, tentaEstacionar, continuaRodando, naoTinhaVagas: C_C
+channel estaciona, sairDoEstacionamento, continuaEstacionado, procurarVaga: C_C
+channel mostrador: C_V
+
+retiraCarro(<>, c) = <>
+
+retiraCarro(<c1>^resto, c) = if c1==c then resto 
+                             else <c1>^retiraCarro(resto, c)
+
+Estacionamento(seqCarros, 0) = sairDoEstacionamento!head(seqCarros) -> Estacionamento(tail(seqCarros), NTEN)
+
+Estacionamento(seqCarros, ntv) = mostrador!(QTDV - #seqCarros) -> Estacionamento(seqCarros, ntv)
+                                [] sairDoEstacionamento?c -> Estacionamento(retiraCarro(seqCarros, c), ntv)
+                                [] if #seqCarros == QTDV then naoTinhaVagas?c -> Estacionamento(seqCarros, ntv-1)
+                                   else procurarVaga?c:diff({1..QTDC}, set(seqCarros)) -> Estacionamento(seqCarros^<c>, NTEN)
+
+Carro(c) = rodando.c -> (tentaEstacionar.c -> Tenta(c)
+						[] continuaRodando.c -> Carro(c))
+
+Tenta(c) = mostrador?qtdC -> if qtdC==0 then naoTinhaVagas.c -> Carro(c)
+							 else procurarVaga.c -> estaciona.c -> Estacionado(c)
+
+Estacionado(c) = (continuaEstacionado.c -> Estacionado(c) |~| sairDoEstacionamento.c -> Carro(c))
+                 [] sairDoEstacionamento.c -> Carro(c)
+                 
+
+Carros = ||| i: C_C @ Carro(i) -- Cria a frota de carros
+
+EShopping = Estacionamento(<>, NTEN) [|{|mostrador, naoTinhaVagas, procurarVaga, sairDoEstacionamento|}|] Carros
+
+assert Carros :[deadlock free [F]]
+assert Estacionamento(<>, NTEN) :[deadlock free [F]]
+
+assert EShopping :[deadlock free [F]]
+assert EShopping :[divergence free [FD]]
+assert EShopping :[deterministic [FD]]

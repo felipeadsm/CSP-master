@@ -1,0 +1,9 @@
+channel jogada1, jogada2, bateu
+
+jVelha = jogada1 -> STOP [] jogada2 -> bateu -> STOP
+
+vitoria = STOP
+
+soBateu = diff(Events, {bateu})
+
+assert vitoria [T= jVelha \ soBateu

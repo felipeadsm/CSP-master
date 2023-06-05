@@ -1,4 +1,5 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina | ampicilina | azitromicina | cefalexina | ciprofloxacino | clindamicina
+REM = {paracetamol, dipirona, dramin, buscopan, amoxilina, ampicilina, azitromicina, cefalexina, ciprofloxacino, clindamicina}
 
 -- Braço Robótico
 channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, nao_pegou_medicamento
@@ -17,21 +18,22 @@ channel nova_prescricao
 channel recupera_prescricoes, gerar_fila_de_prescricoes, conclui_dispencao
 
 -- Gondola
-channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado
+channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: REM
 
 -- fila de prescrição
 -- banco de dados
+	-- Relacionar com o setor
 -- logica de conexao
 
 -- Tem medicamento dispnivel? Como colocar pra ele pegar um remédio específico?
 braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> 
-																						(pegou_medicamento!amoxilina -> posicao_deposito -> garra_abriu -> conclui_dispencao -> braco_robotico 
+																						(pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> conclui_dispencao -> braco_robotico 
                                                                                         |~| nao_pegou_medicamento -> braco_robotico) 
-																						[] gondola_vazia -> braco_robotico
+																						[] gondola_vazia?remedio -> braco_robotico
 
 -- Gondola | Ver algo semelhante a frota de carros
-Gondola(0) = gondola_vazia -> gondola_reposta -> Gondola(10)
-Gondola(numero_medicamentos) = estado_inicial -> pegou_medicamento?med -> novo_estado -> Gondola(numero_medicamentos-1)
+Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, 10)
+Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
 
 -- Robô está conectado? Existe algum problema a ser resolvido?
 operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_medicamento -> operador
@@ -45,9 +47,11 @@ farmaceutico = nova_prescricao -> farmaceutico
 -- Recupera depois de iniciado? Teve algum problema na dispensação? Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
 software_de_controle = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao -> conclui_dispencao -> software_de_controle
 
+-- Gôndolas
+Gondolas = ||| i: REM @ Gondola(i, 10) -- Cria a frota de carros
 
 -- Sincronizações
-farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondola(10)
+farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondolas
 
 -- Asserts
 assert farmacia :[deadlock free [F]]

@@ -23,10 +23,10 @@ Estacionamento(seqCarros, ntv) = mostrador!(QTDV - #seqCarros) -> Estacionamento
                                    else procurarVaga?c:diff({1..QTDC}, set(seqCarros)) -> Estacionamento(seqCarros^<c>, NTEN)
 
 Carro(c) = rodando.c -> (tentaEstacionar.c -> Tenta(c)
-						[] continuaRodando.c -> Carro(c))
+						       [] continuaRodando.c -> Carro(c))
 
 Tenta(c) = mostrador?qtdC -> if qtdC==0 then naoTinhaVagas.c -> Carro(c)
-							 else procurarVaga.c -> estaciona.c -> Estacionado(c)
+							        else procurarVaga.c -> estaciona.c -> Estacionado(c)
 
 Estacionado(c) = (continuaEstacionado.c -> Estacionado(c) |~| sairDoEstacionamento.c -> Carro(c))
                  [] sairDoEstacionamento.c -> Carro(c)

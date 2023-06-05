@@ -22,16 +22,6 @@ RoboHC = Robo [|{|pegaObjeto, depositoVazio|}|] Deposito(5)
 assert RoboHC :[deadlock free [F]]
 
 
-
-
-
-
-
-
-
-
-
-
 -- Robo(acertos, errou) = posicaoInicial -> posicaoFrenteAoObjeto -> abreGarra -> posicaoNoObjeto ->
 -- 			fechaGarra -> (acertos < 3 & pegaObjeto -> posicaoCaixa -> abreGarra -> objetoEntrouNaCaixa -> Robo(acertos+1, false)
 -- 							|~|

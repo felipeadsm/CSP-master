@@ -1,23 +1,55 @@
-channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, pegou, nao_pegou
-channel inicia_software, inicia_conexao_do_robo, inicia_dipensacao, coleta_remedio
+datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina | ampicilina | azitromicina | cefalexina | ciprofloxacino | clindamicina
+
+-- Braço Robótico
+channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, nao_pegou_medicamento
+channel pegou_medicamento: Medicamento
+
+-- Softrware de Controle
+channel inicia_software, inicia_conexao_do_robo, inicia_dipensacao, coleta_medicamento
+
+-- Banco de Dados
 channel atualiza_dados, dispoe_dados
+
+-- Farmaceutico
 channel nova_prescricao
+
+-- Operador
 channel recupera_prescricoes, gerar_fila_de_prescricoes, conclui_dispencao
+
+-- Gondola
+channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado
+
 -- fila de prescrição
 -- banco de dados
 -- logica de conexao
--- gondola vazia
 
--- Tem remedio dispnivel?
-braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> (pegou -> posicao_deposito -> garra_abriu -> conclui_dispencao -> braco_robotico [] nao_pegou -> braco_robotico)
+-- Tem medicamento dispnivel? Como colocar pra ele pegar um remédio específico?
+braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> 
+																						(pegou_medicamento!amoxilina -> posicao_deposito -> garra_abriu -> conclui_dispencao -> braco_robotico 
+                                                                                        |~| nao_pegou_medicamento -> braco_robotico) 
+																						[] gondola_vazia -> braco_robotico
+
+-- Gondola | Ver algo semelhante a frota de carros
+Gondola(0) = gondola_vazia -> gondola_reposta -> Gondola(10)
+Gondola(numero_medicamentos) = estado_inicial -> pegou_medicamento?med -> novo_estado -> Gondola(numero_medicamentos-1)
 
 -- Robô está conectado? Existe algum problema a ser resolvido?
-operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_remedio -> operador
+operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_medicamento -> operador
 
+-- Como dispor as prescrições? Como atualizar o banco de dados?
 banco_de_dados = atualiza_dados -> dispoe_dados -> banco_de_dados
 
+-- Como dispor as prescrições? Como atualizar o banco de dados?
 farmaceutico = nova_prescricao -> farmaceutico
 
 -- Recupera depois de iniciado? Teve algum problema na dispensação? Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
 software_de_controle = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao -> conclui_dispencao -> software_de_controle
 
+
+-- Sincronizações
+farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondola(10)
+
+-- Asserts
+assert farmacia :[deadlock free [F]]
+assert farmacia :[deterministic]
+assert farmacia :[divergence free]

@@ -1,5 +1,5 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina | ampicilina | azitromicina | cefalexina | ciprofloxacino | clindamicina
-REM = {paracetamol, dipirona, dramin, buscopan, amoxilina, ampicilina, azitromicina, cefalexina, ciprofloxacino, clindamicina}
+REM = {paracetamol, dipirona, dramin, buscopan, amoxilina}
 
 -- Braço Robótico
 channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, nao_pegou_medicamento
@@ -32,7 +32,7 @@ braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao -> posicao_de_seg
 																						[] gondola_vazia?remedio -> braco_robotico
 
 -- Gondola | Ver algo semelhante a frota de carros
-Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, 10)
+Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, 5)
 Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
 
 -- Robô está conectado? Existe algum problema a ser resolvido?
@@ -48,7 +48,7 @@ farmaceutico = nova_prescricao -> farmaceutico
 software_de_controle = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao -> conclui_dispencao -> software_de_controle
 
 -- Gôndolas
-Gondolas = ||| i: REM @ Gondola(i, 10) -- Cria a frota de carros
+Gondolas = ||| i: REM @ Gondola(i, 5) -- Cria as gôndolas
 
 -- Sincronizações
 farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondolas

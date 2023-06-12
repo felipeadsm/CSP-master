@@ -7,6 +7,7 @@ REM = {paracetamol, dipirona, dramin, buscopan, amoxilina}
 -- Constantes
 
 banco_de_dados = {(UTI, (paracetamol, dramin)), (maternidade, (dipirona, buscopan)), (oncologia, (paracetamol, amoxilina)), (pediatria, (buscopan, paracetamol)), (psiquiatria, (amoxilina, dramin))}
+-- banco_de_dados = <(UTI, <rem1, rem2, rem3>), ()....>
 
 
 -- Braço Robótico
@@ -48,9 +49,14 @@ operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> col
 
 -- Como dispor as prescrições? Como atualizar o banco de dados?
 -- atualizar_banco_de_dados = atualizar a partir de banco_de_dados
+-- vai inserir isso: (UTI, <rem1, rem2, rem3>)
 farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico
 
 -- Recupera depois de iniciado? Teve algum problema na dispensação? Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
+-- qualSetor?setor ->
+-- software_de_controle(<>) = 
+-- OsRemedios(s) = qualRem?r -> OsRemedios(s ^ <r>)
+-- (setor, seqRem)
 software_de_controle(banco_de_dados) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao -> conclui_dispencao -> software_de_controle
 
 -- Gôndolas
@@ -58,8 +64,12 @@ Gondolas = ||| i: REM @ Gondola(i, 5) -- Cria as gôndolas
 
 -- Sincronizações
 farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondolas
+-- farmacia e software de controle
+
 
 -- Asserts
 assert farmacia :[deadlock free [F]]
 assert farmacia :[deterministic]
 assert farmacia :[divergence free]
+
+-- colocar constante para o numero de remedios

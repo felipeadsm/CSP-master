@@ -45,9 +45,6 @@ Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicame
 operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_medicamento -> operador
 
 -- Como dispor as prescrições? Como atualizar o banco de dados?
--- banco_de_dados = atualiza_dados -> dispoe_dados -> banco_de_dados
-
--- Como dispor as prescrições? Como atualizar o banco de dados?
 -- atualizar_banco_de_dados = atualizar a partir de banco_de_dados
 -- vai inserir isso: (UTI, <rem1, rem2, rem3>)
 farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico

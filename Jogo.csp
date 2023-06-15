@@ -59,7 +59,8 @@ Jogo_Da_Velha(tabuleiro, jogador) =
 	within (not houve_vencedor & listar_posicoes_vazias!jogador!calcular_posicoes_vazias(tabuleiro) -> jogar!jogador?posicao_escolhida -> Jogo_Da_Velha(atualizar_tabuleiro(tabuleiro, posicao_escolhida, jogador), alterna(jogador))
 			[] (houve_vencedor & encerrar_jogo -> informar_vencedor!calcular_vencedor(resultadoVitoria) -> Jogo_Da_Velha(TABULEIRO_VAZIO, alterna(jogador))))
 
-Jogador(jogador) = listar_posicoes_vazias!jogador?posicoes -> (if posicoes != {} then |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida -> jogar!jogador!posicao_escolhida -> Jogador(jogador)
+Jogador(jogador) = listar_posicoes_vazias!jogador?posicoes -> (if posicoes != {} then 
+															  |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida -> jogar!jogador!posicao_escolhida -> Jogador(jogador)
 															   else Jogador(jogador))
 															  [] (encerrar_jogo -> Jogador(jogador))
 Jogadores = ||| jogador:{1,2} @ Jogador(jogador)

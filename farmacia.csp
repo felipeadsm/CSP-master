@@ -41,6 +41,8 @@ braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao!remedio -> posica
 Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, NREM)
 Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
 
+-- |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida
+
 -- Robô está conectado? Existe algum problema a ser resolvido?
 operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_medicamento -> operador
 
@@ -55,7 +57,7 @@ farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico
 -- (setor, seqRem)
 
 -- software_de_controle(<>) = 
-software_de_controle(BD) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao.proxima_prescricao(BD)  -> conclui_dispencao -> software_de_controle(tail(BD))
+software_de_controle(BD) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao!proxima_prescricao(BD)  -> conclui_dispencao -> software_de_controle(tail(BD))
 
 -- Gôndolas
 Gondolas = ||| i: REM @ Gondola(i, NREM) -- Cria as gôndolas

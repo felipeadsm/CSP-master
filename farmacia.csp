@@ -72,7 +72,3 @@ sistema = farmacia [|{|inicia_dipensacao|}|] software_de_controle(banco_de_dados
 assert farmacia :[deadlock free [F]]
 assert farmacia :[deterministic]
 assert farmacia :[divergence free]
-
--- Testes
-sequen = <>
-print sequen ^ <1>

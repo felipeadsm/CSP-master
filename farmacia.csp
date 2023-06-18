@@ -5,7 +5,6 @@ datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
 
 -- Constantes
 NREM = 5
-REM = {paracetamol, dipirona, dramin, buscopan, amoxilina}
 
 banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
 -- banco_de_dados = <(UTI, <rem1, rem2, rem3>), ()....>
@@ -16,7 +15,8 @@ channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranc
 channel pegou_medicamento: Medicamento
 
 -- Softrware de Controle
-channel inicia_software, inicia_conexao_do_robo, inicia_dipensacao, coleta_medicamento
+channel inicia_software, inicia_conexao_do_robo, coleta_medicamento
+channel inicia_dipensacao: Medicamento -- (ACM) Tive que criar este novo canal
 
 -- Banco de Dados
 channel atualiza_dados, dispoe_dados
@@ -28,15 +28,16 @@ channel nova_prescricao, atualizar_banco_de_dados
 channel recupera_prescricoes, gerar_fila_de_prescricoes, conclui_dispencao
 
 -- Gondola
-channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: REM
+channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: Medicamento
 
 -- logica de conexao
 
 -- Tem medicamento dispnivel? Como colocar pra ele pegar um remédio específico?
-braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao!remedio -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> 
+-- (ACM) Para usar "!remedio", você precisa ter introduzido tal variável. Nem vejo como parâmetro e nem como? Troquei por dramin
+braco_robotico = braco_na_posicao_inicial -> inicia_dipensacao!dramin -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> 
 																						(pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> conclui_dispencao -> braco_robotico 
                                                                                         |~| nao_pegou_medicamento -> braco_robotico) 
-																						[] gondola_vazia?remedio -> braco_robotico
+																				
 
 Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, NREM)
 Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
@@ -44,7 +45,8 @@ Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicame
 -- |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida
 
 -- Robô está conectado? Existe algum problema a ser resolvido?
-operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao -> coleta_medicamento -> operador
+-- (ACM) Você colocou inicia_dipensacao como evento mas está usando como evento e canal. Confuso. Estou usando como canal...
+operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao!dramin -> coleta_medicamento -> operador
 
 -- Como dispor as prescrições? Como atualizar o banco de dados?
 -- atualizar_banco_de_dados = atualizar a partir de banco_de_dados
@@ -56,19 +58,26 @@ farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico
 -- OsRemedios(s) = qualRem?r -> OsRemedios(s ^ <r>)
 -- (setor, seqRem)
 
+-- (ACM) O que seria "!proxima_prescricao(BD)"? Troquei por dramin
 -- software_de_controle(<>) = 
-software_de_controle(BD) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao!proxima_prescricao(BD)  -> conclui_dispencao -> software_de_controle(tail(BD))
+software_de_controle(BD) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao!dramin -> conclui_dispencao -> software_de_controle(BD)
 
 -- Gôndolas
-Gondolas = ||| i: REM @ Gondola(i, NREM) -- Cria as gôndolas
+Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 
 -- Sincronizações
-farmacia = braco_robotico [|{|pegou_medicamento, gondola_vazia|}|] Gondolas
+braco_gondola = braco_robotico [|{|pegou_medicamento|}|] Gondolas
 
 -- farmacia e software de controle
-sistema = farmacia [|{|inicia_dipensacao|}|] software_de_controle(banco_de_dados)
+farmacia = braco_gondola [|{|inicia_dipensacao, conclui_dispencao|}|] software_de_controle(banco_de_dados)
 
 -- Asserts
+assert braco_gondola :[deadlock free [F]]
+assert braco_gondola :[deterministic]
+assert braco_gondola :[divergence free]
+
 assert farmacia :[deadlock free [F]]
 assert farmacia :[deterministic]
 assert farmacia :[divergence free]
+
+print tail(banco_de_dados)

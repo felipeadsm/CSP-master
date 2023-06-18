@@ -60,7 +60,8 @@ farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico
 
 -- (ACM) O que seria "!proxima_prescricao(BD)"? Troquei por dramin
 -- software_de_controle(<>) = 
-software_de_controle(BD) = recupera_prescricoes -> gerar_fila_de_prescricoes -> inicia_dipensacao!dramin -> conclui_dispencao -> software_de_controle(BD)
+software_de_controle(BD) = recupera_prescricoes -> if BD != <> then gerar_fila_de_prescricoes -> inicia_dipensacao!dramin -> conclui_dispencao -> software_de_controle(tail(BD)) 
+												   else software_de_controle(BD)
 
 -- Gôndolas
 Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
@@ -79,5 +80,3 @@ assert braco_gondola :[divergence free]
 assert farmacia :[deadlock free [F]]
 assert farmacia :[deterministic]
 assert farmacia :[divergence free]
-
-print tail(banco_de_dados)

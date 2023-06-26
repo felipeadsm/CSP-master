@@ -71,7 +71,6 @@ Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 braco_gondola = braco_robotico [|{|pegou_medicamento|}|] Gondolas
 braco_gerencia = braco_gondola [|{|separa_um_remedio, conclui_uma_separacao|}|] gerencia_de_dispensacao
 
-
 -- farmacia e software de controle
 sistema_farmacia = braco_gerencia [|{|inicia_dipensacao, conclui_dispensacao|}|] software_de_controle(banco_de_dados)
 

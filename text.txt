@@ -1,6 +1,4 @@
-softeware_controle = conevrsacomBB || DispensaMedicamento
 um processo pega a lista inteira, passa para
-
 softeware_controle = conevrsacomBB || DispensaMedicamento
 Envia || Recebe
 

@@ -1,0 +1,21 @@
+datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
+datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
+
+NUM = 3
+fam = {1..NUM}
+banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+
+channel evento_1, evento_3
+channel evento_sinc: Medicamento
+channel sinc_event
+
+OsRemedios((set, med)) = med
+
+robo = evento_1 -> sinc_event?var -> evento_3 -> robo
+
+gerencia_de_dispensacao(meds, lista_medicamento_resto) = evento_1 -> evento_sinc?var -> software_de_controle(lista_medicamento_resto)
+
+software_de_controle(BD) = evento_3 -> evento_sinc!OsRemedios(head(BD)) -> gerencia_de_dispensacao(OsRemedios(head(BD)), tail(BD))
+
+
+processo_3 = gerencia_de_dispensacao(dramin, tail(banco_de_dados)) [|{|evento_sinc|}|] software_de_controle(banco_de_dados)

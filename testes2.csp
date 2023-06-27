@@ -1,0 +1,23 @@
+datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
+datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
+
+NUM = 3
+fam = {1..NUM}
+banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+
+channel inicia_software, evento_final, inicia_robo, inicia_gerenciamento
+channel receber_medicamento: Medicamento
+channel separar_medicamento: Medicamento
+channel triou_medicamento: Medicamento
+
+OsRemedios((set, med)) = med
+
+robo = inicia_robo -> separar_medicamento?var -> triou_medicamento.var -> evento_final -> robo
+
+gerencia_de_dispensacao = inicia_gerenciamento -> receber_medicamento?var -> separar_medicamento!var -> gerencia_de_dispensacao
+
+software_de_controle(BD) = inicia_software -> receber_medicamento!head(OsRemedios(head(BD))) -> software_de_controle(tail(BD))
+
+gerencia = gerencia_de_dispensacao [|{|separar_medicamento|}|] robo
+
+processo_3 = gerencia [|{|receber_medicamento|}|] software_de_controle(banco_de_dados) 

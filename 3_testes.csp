@@ -14,12 +14,17 @@ OsRemedios((set, med)) = med
 
 robo = inicia_robo -> separar_medicamento?var -> medicamento_separado.var -> evento_final -> robo
 
-gerencia_de_dispensacao = inicia_gerenciamento -> receber_medicamento?var -> separar_medicamento!var -> gerencia_de_dispensacao
+gerencia_de_dispensacao(<>, lista_de_medicamentos) = gerencia_de_dispensacao(<>, lista_de_medicamentos)
+gerencia_de_dispensacao(<>, lista_de_medicamentos) = inicia_gerenciamento -> receber_medicamento?var -> separar_medicamento!head(var) -> gerencia_de_dispensacao(<>, tail(var))
 
-software_de_controle(BD) = inicia_software -> receber_medicamento!head(OsRemedios(head(BD))) -> software_de_controle(tail(BD))
+software_de_controle(BD) = inicia_software -> receber_medicamento!OsRemedios(head(BD)) -> software_de_controle(tail(BD))
 
-gerencia = gerencia_de_dispensacao [|{|separar_medicamento|}|] robo
+gerencia = gerencia_de_dispensacao(<>, <dramin, dipirona>) [|{|separar_medicamento|}|] robo
 
 processo_3 = gerencia [|{|receber_medicamento|}|] software_de_controle(banco_de_dados) 
+
+assert processo_3 :[deadlock free [F]]
+assert processo_3 :[deterministic]
+assert processo_3 :[divergence free]
 
 -- |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida

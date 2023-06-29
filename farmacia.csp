@@ -7,13 +7,16 @@ datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
 NREM = 5
 banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
 
+seq = <Medicamento>
 
 -- Braço Robótico
 channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, nao_pegou_medicamento, dispensa_um_remedio
 channel pegou_medicamento: Medicamento
 -- Softrware de Controle
-channel inicia_software, inicia_conexao_do_robo, coleta_medicamento, conclui_uma_separacao, conclui_dispensacao
-channel inicia_dipensacao, separa_um_remedio: Medicamento
+channel inicia_software, inicia_conexao_do_robo, coleta_medicamento, conclui_dispensacao
+channel conclui_uma_separacao: Medicamento
+channel separa_um_remedio: Medicamento
+channel inicia_dipensacao: Medicamento
 -- Banco de Dados
 channel atualiza_dados, dispoe_dados
 -- Farmaceutico
@@ -26,9 +29,8 @@ channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: Medicamento
 
 -- Processos
 
-braco_robotico = braco_na_posicao_inicial -> separa_um_remedio?remedio -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> 
-																						(pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> conclui_uma_separacao.remedio -> braco_robotico 
-                                                                                        |~| nao_pegou_medicamento -> conclui_uma_separacao.remedio -> braco_robotico)
+braco_robotico = braco_na_posicao_inicial -> separa_um_remedio?remedio -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> (pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> conclui_uma_separacao.remedio -> braco_robotico 
+                                                                                                                                 |~| nao_pegou_medicamento -> conclui_uma_separacao.remedio -> braco_robotico)
 																				
 
 Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, NREM)
@@ -53,15 +55,13 @@ OSetor((Setor, Medicamento)) = Setor
 OsRemedios((Setor, Medicamento)) = Medicamento
 
 -- Como usar o tail da lista de meciaemntos? Como fazer a recursão?
--- gerencia_de_dispensacao(lista_medicamentos) = inicia_dipensacao?lista_medicamentos -> if lista_medicamentos != <> then separa_um_remedio!head(lista_medicamentos) -> conclui_uma_separacao -> gerencia_de_dispensacao(tail(lista_medicamentos))
-																  -- else conclui_dispensacao -> gerencia_de_dispensacao(lista_medicamentos)
+gerencia_de_dispensacao = inicia_dipensacao?lista_medicamentos -> if lista_medicamentos != <> then separa_um_remedio!head(lista_medicamentos) -> conclui_uma_separacao.head(lista_medicamentos) -> gerencia_de_dispensacao
+																  else conclui_dispensacao -> gerencia_de_dispensacao
 
-gerencia_de_dispensacao(meds, lista_de_medicamentos) = inicia_dipensacao?lista_medicamentos -> separa_um_remedio!meds -> conclui_uma_separacao -> software_de_controle(lista_de_medicamentos)
-																                               -- else conclui_dispensacao -> software_de_controle(lista_de_medicamentos)
 
 -- software_de_controle(<>) = 
-software_de_controle(BD) = recupera_prescricoes -> if BD != <> then gerar_fila_de_prescricoes -> inicia_dipensacao!OsRemedios(head(BD)) -> conclui_dispensacao -> gerencia_de_dispensacao(OsRemedios(head(BD)), tail(BD)) 
-												   else gerencia_de_dispensacao(OsRemedios(head(BD)), tail(BD))
+software_de_controle(BD) = recupera_prescricoes -> if BD != <> then gerar_fila_de_prescricoes -> inicia_dipensacao!OsRemedios(head(BD)) -> conclui_dispensacao -> software_de_controle(tail(BD)) 
+												   else software_de_controle(BD)
 
 -- TODO
 -- Interromper o braço robótico
@@ -72,7 +72,7 @@ Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 
 -- Sincronizações
 braco_gondola = braco_robotico [|{|pegou_medicamento|}|] Gondolas
-braco_gerencia = braco_gondola [|{|separa_um_remedio, conclui_uma_separacao|}|] gerencia_de_dispensacao(<>)
+braco_gerencia = braco_gondola [|{|separa_um_remedio, conclui_uma_separacao|}|] gerencia_de_dispensacao
 
 -- farmacia e software de controle
 sistema_farmacia = braco_gerencia [|{|inicia_dipensacao, conclui_dispensacao|}|] software_de_controle(banco_de_dados)

@@ -1,0 +1,112 @@
+datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
+datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
+
+-- Setores: UTI, maternidade, oncologia, pediatria, psiquiatria
+
+-- Constantes
+NREM = 5
+banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+
+-- seq = <Medicamento> (ACM) Acho que seq é palavra-reservada
+
+-- Braço Robótico
+channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, nao_pegou_medicamento, dispensa_um_remedio
+channel pegou_medicamento: Medicamento
+-- Softrware de Controle
+channel inicia_software, inicia_conexao_do_robo, coleta_medicamento, conclui_dispensacao
+channel conclui_uma_separacao: Medicamento
+channel separa_um_remedio: Medicamento
+channel inicia_dipensacao: Seq(Medicamento)
+-- Banco de Dados
+channel atualiza_dados, dispoe_dados
+-- Farmaceutico
+channel nova_prescricao, atualizar_banco_de_dados
+-- Operador
+channel recupera_prescricoes, gerar_fila_de_prescricoes
+-- Gondola
+channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: Medicamento
+-- logica de conexao
+
+-- Processos
+
+braco_robotico = braco_na_posicao_inicial -> separa_um_remedio?remedio -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> (pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> conclui_uma_separacao.remedio -> braco_robotico 
+                                                                                                                                 |~| nao_pegou_medicamento -> conclui_uma_separacao.remedio -> braco_robotico)
+																				
+
+Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondola(remedio, NREM)
+Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
+
+-- Para a logica de conexão ver let withim e usar boleano para avalair conexão.
+-- Robô está conectado? Existe algum problema a ser resolvido?
+-- (ACM) Você colocou inicia_dipensacao como evento mas está usando como evento e canal. Confuso. Estou usando como canal...
+--operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao!dramin -> coleta_medicamento -> operador
+
+-- Como dispor as prescrições? Como atualizar o banco de dados?
+-- atualizar_banco_de_dados = atualizar a partir de banco_de_dados
+-- Vai inserir isso: (UTI, <rem1, rem2, rem3>)
+-- Vai inserir em qual banco? Aqui também recebe o banco_de_dados?
+-- OsRemedios(s) = qualRem?r -> OsRemedios(s ^ <r>)
+-- (setor, seqRem)
+farmaceutico = nova_prescricao -> atualizar_banco_de_dados -> farmaceutico
+
+-- Recupera depois de iniciado? Teve algum problema na dispensação? Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
+-- Inserir Lógica do Setor
+OSetor((Setor, Medicamento)) = Setor
+OsRemedios((Setor, Medicamento)) = Medicamento
+
+-- Como usar o tail da lista de medicamentos? Como fazer a recursão?
+-- (ACM) O canal inicia_dipensacao é do tipo Medicamento. Por que você faz o teste lista_medicamentos != <> que requer
+-- que lista_medicamentos seja uma sequência? Este é o problema
+gerencia_de_dispensacao = inicia_dipensacao?lista_medicamentos -> gerencia_de_dispensacao
+-- if lista_medicamentos != <> then separa_um_remedio!head(lista_medicamentos) ->
+--			conclui_uma_separacao.head(lista_medicamentos) -> gerencia_de_dispensacao
+--	else conclui_dispensacao -> gerencia_de_dispensacao
+
+
+-- software_de_controle(<>) = 
+-- (ACM) A função OsRemedios requer uma estrutura e seu processo usa outra
+-- (ACM) inicia_dipensacao é do tipo Medicamento, mas OsRemedios(head(BD)) retorna o tipo (Setor, Medicamento). Além disso,
+-- (ACM) sua constante bando_de_dados tem tipo (Setor, seq(Medicamento)). Tem que extrair os conteúdos primeiro para unificar
+-- (ACM) os tipos
+software_de_controle(BD) = recupera_prescricoes -> if BD != <> then gerar_fila_de_prescricoes -> SKIP
+	--inicia_dipensacao!head(BD) -> conclui_dispensacao -> software_de_controle(tail(BD)) 
+--	inicia_dipensacao!OsRemedios(head(BD)) -> conclui_dispensacao -> software_de_controle(tail(BD)) 
+												   else software_de_controle(BD)
+
+-- TODO
+-- Interromper o braço robótico
+-- Mudar prioridade a aprtir do setor
+
+-- Gôndolas
+Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
+
+-- Sincronizações
+braco_gondola = braco_robotico [|{|pegou_medicamento|}|] Gondolas
+braco_gerencia = braco_gondola [|{|separa_um_remedio, conclui_uma_separacao|}|] gerencia_de_dispensacao
+
+-- farmacia e software de controle
+sistema_farmacia = braco_gerencia [|{|inicia_dipensacao, conclui_dispensacao|}|] software_de_controle(banco_de_dados)
+
+
+-- Asserts
+-- assert braco_gondola :[deadlock free [F]]
+-- assert braco_gondola :[deterministic]
+-- assert braco_gondola :[divergence free]
+
+assert sistema_farmacia :[deadlock free [F]]
+assert sistema_farmacia :[deterministic]
+assert sistema_farmacia :[divergence free]
+
+
+-- Testes
+
+print head(banco_de_dados)
+print OsRemedios(head(banco_de_dados))
+print (head(OsRemedios(head(banco_de_dados))))
+print OSetor(head(banco_de_dados))
+
+-- Anotações
+
+-- (OsRemedios(head(BD)))
+-- banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+-- |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida

@@ -20,6 +20,4 @@ software_de_controle(BD) = inicia_software -> receber_medicamento!head(OsRemedio
 
 gerencia = gerencia_de_dispensacao [|{|separar_medicamento|}|] robo
 
-processo_3 = gerencia [|{|receber_medicamento|}|] software_de_controle(banco_de_dados) 
-
--- |~| posicao_escolhida : posicoes @ listar_possiveis_posicoes!posicao_escolhida
+farmacia = gerencia [|{|receber_medicamento|}|] software_de_controle(banco_de_dados) 

@@ -1,0 +1,29 @@
+Se você tem uma estrutura assim
+
+banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+
+Você tem que aplicar head para obter, por exemplo, (UTI, <paracetamol, dramin>). Aí você tem que separar o 1o elemento da tupla do 2o. Usar funções que criei com vocês.
+
+Ao obter a sequência <paracetamol, dramin>, você tem que voltar a aplicar o head e tail para pegar cada medicamento. Só neste ponto é que você usa os canais.
+
+----------------------------------------------------------------------------------------------------------------------
+
+um processo pega a lista inteira, passa para
+softeware_controle = conevrsacomBB || DispensaMedicamento
+Envia || Recebe
+
+Envia = a!lista -> ...
+Recebe = a?l -> ....
+
+Envia = inicia -> a!p1 -> a!p2 ->....-> fim -> ....
+Recebe = inicia -> a?p -> a?p -> ... -> fim -> ...
+
+Recebe || Robo
+SW_Controle || Robo
+
+Gerenciador = inicia -> a?m1 -> enviaRobo!m1 -> a?m2 -> enviaRobo -> m2 ->....
+
+SW_Controle(ListaDeListas) = ....
+SW_Controle(ListaDeListas) = .... Dispensador(head(ListaDeListas), tail(ListaDeListas))
+
+Dispensador(<>, ListaDeListasResto) = .... SW_Controle(ListaDeListasResto)

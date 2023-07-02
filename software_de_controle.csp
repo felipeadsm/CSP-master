@@ -1,0 +1,34 @@
+datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
+datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
+
+banco_de_dados = <(UTI, <paracetamol, amoxilina>), 
+                  (maternidade, <dipirona, buscopan>), 
+                  (oncologia, <dramin, dramin>), 
+                  (pediatria, <buscopan, dipirona>), 
+                  (psiquiatria, <amoxilina, paracetamol>)>
+
+-- prescricao = (Setor, Medicamento)
+
+channel inicia_software, inicia_robo, inicia_gerenciamento, pegar_prescricao, inicia_dispensacao, conclui_dispensacao
+channel separar_medicamento: Medicamento
+channel medicamento_separado: Medicamento
+
+-- Funções
+OsRemedios((sector, med)) = med
+OSetor((sector, med)) = sector
+
+-- Processos
+robo = inicia_robo -> separar_medicamento?remedio -> medicamento_separado.remedio -> robo
+
+-- Aqui é onde já recebe o medicamento separado
+gerencia_de_dispensacao(ListaMedicamentos, cauda_prescricoes) = if ListaMedicamentos != <> then inicia_dispensacao -> separar_medicamento!head(ListaMedicamentos) -> gerencia_de_dispensacao(tail(ListaMedicamentos), cauda_prescricoes)
+                                                                else conclui_dispensacao -> if cauda_prescricoes != <> then conversa_com_banco(head(cauda_prescricoes), tail(cauda_prescricoes))
+                                                                                            else SKIP
+
+-- Aqui lida com o dado do Banco de Dados
+conversa_com_banco(prescricao, cauda_prescricoes) = pegar_prescricao -> gerencia_de_dispensacao(OsRemedios(prescricao), cauda_prescricoes)
+
+software_de_controle(BD) = inicia_software -> conversa_com_banco(head(BD), tail(BD))
+
+-- Sincronizações
+dfarmacia(DB) = robo [|{|separar_medicamento|}|] software_de_controle(DB)

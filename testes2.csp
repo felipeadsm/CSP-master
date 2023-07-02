@@ -1,23 +1,54 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
 datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
 
-NUM = 3
-fam = {1..NUM}
-banco_de_dados = <(UTI, <paracetamol, dramin>), (maternidade, <dipirona, buscopan>), (oncologia, <paracetamol, amoxilina>), (pediatria, <buscopan, paracetamol>), (psiquiatria, <amoxilina, dramin>)>
+banco_de_dados = <(UTI, <paracetamol, amoxilina>), 
+                  (maternidade, <dipirona, buscopan>), 
+                  (oncologia, <dramin, dramin>), 
+                  (pediatria, <buscopan, dipirona>), 
+                  (psiquiatria, <amoxilina, paracetamol>)>
 
-channel inicia_software, evento_final, inicia_robo, inicia_gerenciamento
-channel receber_medicamento: Medicamento
+channel inicia_software, inicia_robo, inicia_gerenciamento
+channel receber_medicamento
 channel separar_medicamento: Medicamento
 channel medicamento_separado: Medicamento
 
-OsRemedios((set, med)) = med
+-- Funções
+OsRemedios((sector, med)) = med
+OSetor((sector, med)) = sector
 
-robo = inicia_robo -> separar_medicamento?var -> medicamento_separado.var -> evento_final -> robo
+-- Processos
+robo = inicia_robo -> separar_medicamento?remedio -> medicamento_separado.remedio -> robo
 
-gerencia_de_dispensacao = inicia_gerenciamento -> receber_medicamento?var -> separar_medicamento!var -> gerencia_de_dispensacao
+-- Aqui é onde já recebe o medicamento separado
+gerencia_de_dispensacao(ListaMedicamentos, cauda_prescricoes) = inicia_gerenciamento -> if ListaMedicamentos != <> then receber_medicamento -> separar_medicamento!head(ListaMedicamentos) -> gerencia_de_dispensacao(tail(ListaMedicamentos), cauda_prescricoes)
+                                                                                        else if cauda_prescricoes != <> then software_de_controle(cauda_prescricoes)
+                                                                                             else SKIP
 
-software_de_controle(BD) = inicia_software -> receber_medicamento!head(OsRemedios(head(BD))) -> software_de_controle(tail(BD))
+-- Aqui lida com o dado do Banco de Dados
+-- conversa_com_banco(presc) = inicia_software -> receber_medicamento!head(OsRemedios(head(presc))) -> gerencia_de_dispensacao(tail(OsRemedios(head(presc))), tail(presc))
 
-gerencia = gerencia_de_dispensacao [|{|separar_medicamento|}|] robo
+conversa_com_banco(prescricao, cauda_prescricoes) = inicia_software -> receber_medicamento -> gerencia_de_dispensacao(OsRemedios(prescricao), cauda_prescricoes)
 
-farmacia = gerencia [|{|receber_medicamento|}|] software_de_controle(banco_de_dados) 
+software_de_controle(BD) = inicia_software -> conversa_com_banco(head(BD), tail(BD))
+
+-- Sincronizações
+-- gerencia = gerencia_de_dispensacao [|{|separar_medicamento|}|] robo
+farmacia(DB) = ((gerencia_de_dispensacao(OsRemedios(head(DB)), tail(DB)) [|{|separar_medicamento|}|] robo) [|{|receber_medicamento|}|] conversa_com_banco(head(DB), tail(DB))) [|{|inicia_software|}|] software_de_controle(DB)
+
+
+-- 1. Preciso passar banco_de_dados como parâmetro inicial, porém preciso extrair a primeira prescrição no formato (Setor, Medicamento). 
+
+-- 2. Depois, preciso extrair a lista de medicamentos da prescrição. Depois preciso extrair o primeiro medicamento da lista de medicamentos 
+-- preservando essa lista de medicamentos.
+
+-- 3. Com isso, preciso trabalhar com head(banco_de_dados) para extrair a prescricao e poder trabalhar com a lista de medicamentos
+-- e tail(banco_de_dados) para ter controle de quais prescrições ainda precisa ser dispensadas.
+
+-- Então, eu preciso de um processo que separe head(banco_de_dados) e tail(banco_de_dados) e passe isso como parâmetro para outro processo.
+
+-- Esse processo deve comunicar com outro processo que receba a lista de medicamentos e o tail(banco de dados) para ter a lista
+-- de medicamentos e a lista de prescrições que ainda precisam ser dispensadas.
+
+-- Nisso, eu preciso criar uma recursão, onde eu passo head(lista_de_medicamentos) para um canal e passo a tail(lista_de_medicamentos) 
+-- para a recursão. Quando a lista de medicamentos acabar, eu passo a lista de prescrições que ainda precisam ser dispensadas para a
+-- recursão. Quando a lista de prescrições acabar, eu encerro o processo. 

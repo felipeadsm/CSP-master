@@ -1,18 +1,18 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
 datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
 
--- Setores: UTI, maternidade, oncologia, pediatria, psiquiatria
-
 -- Constantes
 NREM = 3 -- Número de remédios por gôndola
-banco_de_dados = <(UTI, <paracetamol, amoxilina, dramin, amoxilina>), 
+banco_de_dados = <(oncologia, <paracetamol, amoxilina, dramin, amoxilina>), 
                   (maternidade, <dipirona, buscopan, amoxilina>), 
-                  (oncologia, <dramin, dramin, paracetamol>), 
+                  (UTI, <dramin, dramin, paracetamol>), 
                   (pediatria, <buscopan, dipirona, dipirona>), 
                   (psiquiatria, <amoxilina, paracetamol>)>
 
 novas_prescricoes = <(oncologia, <dipirona, paracetamol>), 
                      (psiquiatria, <paracetamol, amoxilina>)>
+
+ordem_preferencial = <UTI, oncologia, maternidade, pediatria, psiquiatria>
 
 -- Braço Robótico
 channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranca, posicao_deposito, dispensa_um_remedio

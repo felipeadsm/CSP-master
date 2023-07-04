@@ -19,7 +19,8 @@ channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranc
 channel pegou_medicamento, nao_pegou_medicamento: Medicamento
 
 -- Softrware de Controle
-channel inicia_software, inicia_conexao_do_robo, iniciar_dispensacao, coleta_medicamento, inicia_dipensacao, conclui_dispensacao, inicia_separacao, pegar_proxima_prescricao, concluiu_uma_separacao
+channel inicia_software, inicia_conexao_do_robo, iniciar_dispensacao, coleta_medicamento, inicia_dipensacao, conclui_dispensacao,
+channel pegar_proxima_prescricao, inicia_separacao, concluiu_uma_separacao
 channel separar_um_remedio: Medicamento 
 
 -- Banco de Dados
@@ -54,13 +55,13 @@ Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicame
 farmaceutico(banco_vazio) = nova_prescricao -> atualizar_banco_de_dados -> software_de_controle(banco_vazio^novas_prescricoes)
 
 gerencia_de_dispensacao(lista_medicamentos, resto_prescricoes) =  if lista_medicamentos != <> then inicia_separacao -> separar_um_remedio!head(lista_medicamentos) -> concluiu_uma_separacao -> gerencia_de_dispensacao(tail(lista_medicamentos), resto_prescricoes)
-                                                                  else conclui_dispensacao -> if resto_prescricoes != <> then conversa_com_banco(head(resto_prescricoes), tail(resto_prescricoes))
-                                                                       else aguardando_prescricao -> farmaceutico(resto_prescricoes)
+                                                                  else conclui_dispensacao -> software_de_controle(resto_prescricoes)
+                                                                  
 
 conversa_com_banco(prescricao, resto_prescricoes) = pegar_proxima_prescricao -> iniciar_dispensacao -> gerencia_de_dispensacao(OsRemedios(prescricao), resto_prescricoes)
 
 software_de_controle(BD) = inicia_software -> if BD != <> then gerar_fila_de_prescricoes -> conversa_com_banco(head(BD), tail(BD))
-											  else software_de_controle(BD)
+									 else aguardando_prescricao -> farmaceutico(BD)
 
 Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 
@@ -76,9 +77,8 @@ assert farmacia :[deterministic]
 assert farmacia :[divergence free]
 
 -- TODO
-
 -- Lógica de conexão
 -- Interromper o braço robótico
--- Mudar prioridade a aprtir do setor
--- Recupera depois de iniciado? Teve algum problema na dispensação? Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
--- Inserir Lógica do Setor
+-- Inserir Lógica do Setor e Mudar prioridade a partir do setor
+-- Recupera depois de iniciado? Teve algum problema na dispensação? 
+-- Tem remédio disponível? caso não tenha, solicitar reposição ao operador!

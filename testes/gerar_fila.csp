@@ -1,6 +1,5 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
 datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
-algo = 1
 
 banco_de_dados = <(oncologia, <paracetamol, amoxilina, dramin, amoxilina>), 
                   (maternidade, <dipirona, buscopan, amoxilina>), 
@@ -10,18 +9,9 @@ banco_de_dados = <(oncologia, <paracetamol, amoxilina, dramin, amoxilina>),
 
 ordem_preferencial = <UTI, oncologia, maternidade, pediatria, psiquiatria>
 
-tabuleiro_teste = <(1, 1, 1), (1, 2, 2), (1, 3, 0), (2, 1, 0), (2, 2, 0), (2, 3, 0), (3, 1, 0), (3, 2, 0), (3, 3, 0)>
-
 channel gerar_fila, usar_fila: {1..2}
-
-calcular_posicoes_vazias(tabuleiro) = <(linha, coluna) | (linha, coluna, estado) <- tabuleiro, estado == 0>
-verificar_linhas (tabuleiro, linha_escolhida, jogador_escolhido) = (card({(linha, coluna, estado) | (linha, coluna, estado) <- tabuleiro, linha == linha_escolhida and estado == jogador_escolhido}) == 3)
 
 gerar_prioridades(BD, OP) = <(setor, med) | (setor, med) <- BD, setor == head(OP)>
 
--- processo = gerar_fila?algo -> usar_fila!algo -> processo(algo)
-
 print gerar_prioridades(banco_de_dados, ordem_preferencial)
 print calcular_posicoes_vazias(tabuleiro_teste)
-
--- preciso de uma função que receba um banco de dados e uma ordem de preferência e me retorne o banco reordenado

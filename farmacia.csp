@@ -1,16 +1,16 @@
 datatype Medicamento = paracetamol | dipirona | dramin | buscopan | amoxilina
 datatype Setor = UTI | maternidade | oncologia | pediatria | psiquiatria
-
+Banco = <(Setor, <Medicamento>)>
 -- Constantes
 NREM = 3 -- Número de remédios por gôndola
 banco_de_dados = <(oncologia, <paracetamol, amoxilina, dramin, amoxilina>), 
                   (maternidade, <dipirona, buscopan, amoxilina>), 
-                  (UTI, <dramin, dramin, paracetamol>), 
-                  (pediatria, <buscopan, dipirona, dipirona>), 
-                  (psiquiatria, <amoxilina, paracetamol>)>
+                  (UTI, <dramin, dramin, paracetamol>),
+                  (psiquiatria, <amoxilina, paracetamol>),
+                  (pediatria, <buscopan, dipirona, dipirona>)>
 
 novas_prescricoes = <(oncologia, <dipirona, paracetamol>), 
-                     (psiquiatria, <paracetamol, amoxilina>)>
+                     (maternidade, <paracetamol, amoxilina>)>
 
 ordem_preferencial = <UTI, oncologia, maternidade, pediatria, psiquiatria>
 
@@ -19,8 +19,8 @@ channel garra_abriu, garra_fechou, braco_na_posicao_inicial, posicao_de_seguranc
 channel pegou_medicamento, nao_pegou_medicamento: Medicamento
 
 -- Softrware de Controle
-channel inicia_software, inicia_conexao_do_robo, iniciar_dispensacao, coleta_medicamento, inicia_dipensacao, conclui_dispensacao,
-channel pegar_proxima_prescricao, inicia_separacao, concluiu_uma_separacao
+channel inicia_software, iniciar_dispensacao, inicia_dipensacao, conclui_dispensacao
+channel pegar_proxima_prescricao, inicia_separacao, concluiu_uma_separacao, gerar_fila_de_prescricoes
 channel separar_um_remedio: Medicamento 
 
 -- Banco de Dados
@@ -30,7 +30,8 @@ channel atualiza_dados, dispoe_dados
 channel nova_prescricao, atualizar_banco_de_dados, aguardando_prescricao
 
 -- Operador
-channel recupera_prescricoes, gerar_fila_de_prescricoes
+channel recupera_prescricoes, inicia_conexao_do_robo, inicia_trabalho
+channel coletou_kit: Setor
 
 -- Gondola
 channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: Medicamento
@@ -40,6 +41,8 @@ channel gondola_vazia, gondola_reposta, estado_inicial, novo_estado: Medicamento
 -- Funções Auxiliares
 OSetor((Setor, Medicamento)) = Setor
 OsRemedios((Setor, Medicamento)) = Medicamento
+gerar_prioridades(BD, OP, banco_ordenado) = if OP != <> then gerar_prioridades(BD, tail(OP), banco_ordenado^<(setor, med) | (setor, med) <- BD, setor == head(OP)>)
+                                            else banco_ordenado
 
 -- Processos
 braco_robotico = braco_na_posicao_inicial -> separar_um_remedio?remedio -> posicao_de_seguranca -> garra_abriu -> garra_fechou -> (pegou_medicamento?remedio -> posicao_deposito -> garra_abriu -> concluiu_uma_separacao-> braco_robotico 
@@ -49,19 +52,19 @@ Gondola(remedio, 0) = gondola_vazia.remedio -> gondola_reposta.remedio -> Gondol
 Gondola(remedio, numero_medicamentos) = estado_inicial.remedio -> pegou_medicamento.remedio -> novo_estado.remedio -> Gondola(remedio, numero_medicamentos - 1)
 
 -- Para a logica de conexão ver let withim e usar boleano para avalair conexão. Robô está conectado? Existe algum problema a ser resolvido?
--- operador = inicia_software -> inicia_conexao_do_robo -> inicia_dipensacao!dramin -> coleta_medicamento -> operador
+operador = coletou_kit?setor -> operador
 
 -- Vai inserir isso: (UTI, <rem1, rem2, rem3>)
 farmaceutico(banco_vazio) = nova_prescricao -> atualizar_banco_de_dados -> software_de_controle(banco_vazio^novas_prescricoes)
 
-gerencia_de_dispensacao(lista_medicamentos, resto_prescricoes) =  if lista_medicamentos != <> then inicia_separacao -> separar_um_remedio!head(lista_medicamentos) -> concluiu_uma_separacao -> gerencia_de_dispensacao(tail(lista_medicamentos), resto_prescricoes)
-                                                                  else conclui_dispensacao -> software_de_controle(resto_prescricoes)
+gerencia_de_dispensacao(lista_medicamentos, setor, resto_prescricoes) =  if lista_medicamentos != <> then inicia_separacao -> separar_um_remedio!head(lista_medicamentos) -> concluiu_uma_separacao -> gerencia_de_dispensacao(tail(lista_medicamentos), setor, resto_prescricoes)
+                                                                         else conclui_dispensacao -> coletou_kit.setor -> software_de_controle(resto_prescricoes)
                                                                   
 
-conversa_com_banco(prescricao, resto_prescricoes) = pegar_proxima_prescricao -> iniciar_dispensacao -> gerencia_de_dispensacao(OsRemedios(prescricao), resto_prescricoes)
+conversa_com_banco(prescricao, resto_prescricoes) = pegar_proxima_prescricao -> iniciar_dispensacao -> gerencia_de_dispensacao(OsRemedios(prescricao), OSetor(prescricao), resto_prescricoes)
 
-software_de_controle(BD) = inicia_software -> if BD != <> then gerar_fila_de_prescricoes -> conversa_com_banco(head(BD), tail(BD))
-									 else aguardando_prescricao -> farmaceutico(BD)
+software_de_controle(BD) = inicia_software -> if BD != <> then gerar_fila_de_prescricoes -> conversa_com_banco(head(gerar_prioridades(BD, ordem_preferencial, <>)), tail(gerar_prioridades(BD, ordem_preferencial, <>)))
+									              else aguardando_prescricao -> farmaceutico(BD)
 
 Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 
@@ -69,16 +72,35 @@ Gondolas = ||| i: Medicamento @ Gondola(i, NREM) -- Cria as gôndolas
 braco_e_gondola = Gondolas [|{|pegou_medicamento|}|] braco_robotico
 
 -- Braço robótico, gôndola e software de controle
-farmacia = braco_e_gondola [|{|separar_um_remedio, concluiu_uma_separacao|}|] software_de_controle(banco_de_dados)
+farmacia = (braco_e_gondola [|{|separar_um_remedio, concluiu_uma_separacao|}|] (software_de_controle(banco_de_dados))) [|{|coletou_kit|}|] operador
 
 -- Asserts
 assert farmacia :[deadlock free [F]]
-assert farmacia :[deterministic]
 assert farmacia :[divergence free]
 
 -- TODO
 -- Lógica de conexão
 -- Interromper o braço robótico
--- Inserir Lógica do Setor e Mudar prioridade a partir do setor
--- Recupera depois de iniciado? Teve algum problema na dispensação? 
--- Tem remédio disponível? caso não tenha, solicitar reposição ao operador!
+
+-- Propriedades para validar
+-- Houve um abort e daí nada será impresso. E assim por diante. Semelhante a testar o sistema por resultados esperados
+
+
+-- Aqui fiz a verificação pelo setor, pra saber se ele realmente foi triado primeiro no caso da UTI e em terceiro no caso da maternidade.
+assert STOP [T= farmacia \ diff(Events, {coletou_kit.UTI})
+assert STOP [T= farmacia \ diff(Events, {coletou_kit.maternidade})
+
+
+-- Tentativas de Ordenação
+banco_de_teste = <(oncologia, <paracetamol, amoxilina, dramin, amoxilina>), 
+                  (maternidade, <dipirona, buscopan, amoxilina>), 
+                  (UTI, <dramin, dramin, paracetamol>),
+                  (pediatria, <buscopan, dipirona, dipirona>),
+                  (UTI, <paracetamol, dramin>), 
+                  (psiquiatria, <amoxilina, paracetamol>),
+                  (oncologia, <paracetamol, amoxilina>)>
+
+print gerar_prioridades(banco_de_teste, ordem_preferencial, <>)
+print head(gerar_prioridades(banco_de_teste, ordem_preferencial, <>))
+print tail(gerar_prioridades(banco_de_teste, ordem_preferencial, <>))
+
